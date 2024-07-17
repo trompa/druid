@@ -137,6 +137,29 @@ public class PostgreSQLConnectorTest
     Assert.assertEquals(expected, connectionSQL);
   }
 
+
+  @Test
+  public void testInitSQL_notSetPathPublic() throws JsonProcessingException
+  {
+
+    ObjectMapper objectMapper = new ObjectMapper();
+    PostgreSQLTablesConfig config = objectMapper.readValue(
+        " {\"dbTableSchema\": \"public\", \"setSearchPath\":\"true\" }",
+        PostgreSQLTablesConfig.class
+    );
+
+    MockPostgreSQLConnector connector = new MockPostgreSQLConnector(
+        Suppliers.ofInstance(new MetadataStorageConnectorConfig()),
+        Suppliers.ofInstance(MetadataStorageTablesConfig.fromBase(null)),
+        new PostgreSQLConnectorConfig(),
+        config,
+        centralizedDatasourceSchemaConfig
+    );
+
+    Assert.assertEquals(0, connector.dataSource.getConnectionInitSqls().size());
+  }
+
+
   static public class MockPostgreSQLConnector extends PostgreSQLConnector
   {
     public BasicDataSource dataSource;
@@ -158,5 +181,4 @@ public class PostgreSQLConnectorTest
       return this.dataSource;
     }
   }
-
 }
