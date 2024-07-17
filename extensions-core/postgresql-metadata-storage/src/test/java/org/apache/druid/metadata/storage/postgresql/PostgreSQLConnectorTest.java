@@ -19,7 +19,11 @@
 
 package org.apache.druid.metadata.storage.postgresql;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import org.apache.commons.dbcp2.BasicDataSource;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
@@ -32,6 +36,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+
 
 @RunWith(Parameterized.class)
 public class PostgreSQLConnectorTest
@@ -86,4 +91,72 @@ public class PostgreSQLConnectorTest
     );
     Assert.assertEquals("LIMIT 100", connector.limitClause(100));
   }
+
+  @Test
+  public void testInitSQL_notSetPath() throws JsonProcessingException
+  {
+
+    ObjectMapper objectMapper = new ObjectMapper();
+    PostgreSQLTablesConfig config = objectMapper.readValue(
+        " {\"dbTableSchema\": \"druid\", \"setSearchPath\":\"false\" }",
+        PostgreSQLTablesConfig.class
+    );
+
+    MockPostgreSQLConnector connector = new MockPostgreSQLConnector(
+        Suppliers.ofInstance(new MetadataStorageConnectorConfig()),
+        Suppliers.ofInstance(MetadataStorageTablesConfig.fromBase(null)),
+        new PostgreSQLConnectorConfig(),
+        config,
+        centralizedDatasourceSchemaConfig
+    );
+
+    Assert.assertEquals(0, connector.dataSource.getConnectionInitSqls().size());
+  }
+
+  @Test
+  public void testInitSQL_setPath() throws JsonProcessingException
+  {
+
+    ObjectMapper objectMapper = new ObjectMapper();
+    PostgreSQLTablesConfig config = objectMapper.readValue(
+        " {\"dbTableSchema\": \"druid\", \"setSearchPath\":\"true\" }",
+        PostgreSQLTablesConfig.class
+    );
+
+    MockPostgreSQLConnector connector = new MockPostgreSQLConnector(
+        Suppliers.ofInstance(new MetadataStorageConnectorConfig()),
+        Suppliers.ofInstance(MetadataStorageTablesConfig.fromBase(null)),
+        new PostgreSQLConnectorConfig(),
+        config,
+        centralizedDatasourceSchemaConfig
+    );
+
+    String expected = "SET SEARCH_PATH TO druid";
+    String connectionSQL = connector.dataSource.getConnectionInitSqls().get(0);
+
+    Assert.assertEquals(expected, connectionSQL);
+  }
+
+  static public class MockPostgreSQLConnector extends PostgreSQLConnector
+  {
+    public BasicDataSource dataSource;
+    public MockPostgreSQLConnector(
+        Supplier<MetadataStorageConnectorConfig> config,
+        Supplier<MetadataStorageTablesConfig> dbTables,
+        PostgreSQLConnectorConfig connectorConfig,
+        PostgreSQLTablesConfig tablesConfig,
+        CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
+    )
+    {
+      super(config, dbTables, connectorConfig, tablesConfig, centralizedDatasourceSchemaConfig);
+    }
+
+    @Override
+    protected BasicDataSource getDatasource()
+    {
+      this.dataSource = makeDatasource(getConfig(), getValidationQuery());
+      return this.dataSource;
+    }
+  }
+
 }

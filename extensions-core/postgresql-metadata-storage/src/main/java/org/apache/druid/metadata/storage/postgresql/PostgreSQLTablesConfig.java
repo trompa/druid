@@ -26,9 +26,17 @@ public class PostgreSQLTablesConfig
   @JsonProperty
   private String dbTableSchema = "public";
 
+  @JsonProperty
+  private Boolean setSearchPath = false;
+
   public String getDbTableSchema()
   {
     return dbTableSchema;
+  }
+
+  public Boolean getSetSeatchPath()
+  {
+    return setSearchPath;
   }
 
   @Override
@@ -36,6 +44,7 @@ public class PostgreSQLTablesConfig
   {
     return "PostgreSQLTablesConfig{" +
            ", dbTableSchema='" + dbTableSchema + '\'' +
+           ", setSearchPath='" + setSearchPath + '\'' +
           '}';
   }
 }

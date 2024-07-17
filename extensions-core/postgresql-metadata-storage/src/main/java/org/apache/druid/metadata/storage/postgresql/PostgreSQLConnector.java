@@ -21,6 +21,7 @@ package org.apache.druid.metadata.storage.postgresql;
 
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.apache.druid.java.util.common.StringUtils;
@@ -119,7 +120,13 @@ public class PostgreSQLConnector extends SQLMetadataConnector
 
     this.dbi = new DBI(datasource);
     this.dbTableSchema = tablesConfig.getDbTableSchema();
-    
+
+    Boolean setSearchPath = tablesConfig.getSetSeatchPath();
+    if(setSearchPath && !this.dbTableSchema.equals("public")) {
+      datasource.setConnectionInitSqls(ImmutableList.of("SET SEARCH_PATH TO " + this.dbTableSchema));
+      log.info("Postgres metadata Storage set search path to[%s]", this.dbTableSchema);
+    }
+
     log.info("Configured PostgreSQL as metadata storage");
   }
 
